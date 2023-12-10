@@ -1,0 +1,268 @@
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 1
+
+
+
+
+
+       MCS-51 Family Macro Assembler   A S E M - 5 1   V 1.3
+       =====================================================
+
+
+
+	Source File:	C:\Users\Mainul Islam\Documents\A Lab Files\4706\tota\ALARM_CLOCK_00.asm
+	Object File:	C:\Users\Mainul Islam\Documents\A Lab Files\4706\tota\ALARM_CLOCK_00.hex
+	List File:	C:\Users\Mainul Islam\Documents\A Lab Files\4706\tota\ALARM_CLOCK_00.lst
+
+
+
+ Line  I  Addr  Code            Source
+
+    1:		N      0000	ORG 00H
+    2:
+    3:	  0000	75 81 70		MOV SP, #70H ; initiation in stack pointer
+    4:	  0003	75 D0 00		MOV PSW, #00H ; initiation in 0 reg bank 0
+    5:
+    6:		N      0067		ALAR EQU 67H
+    7:		N      0068		STOPWH EQU 68H ; for stopwatch hour for calculation
+    8:		N      0069		STOR_S EQU 69H ; store stopwatch second
+    9:		N      006A	 	STOR_M EQU 6AH ; store stopwatch minute
+   10:		N      006B		STOR_H EQU 6BH ; store stopwatch hour
+   11:
+   12:					;FOR CLOCK
+   13:	  0006	A8 00			MOV R0, 0H ; to go from 0 to 14 and make reset
+   14:	  0008	A9 00			MOV R1, 0H ; from one to 60 seconds
+   15:	  000A	AA 00			MOV R2, 0H ; From one to 60 minutes
+   16:	  000C	AB 00			MOV R3, 0H ; from one to 24 hours
+   17:
+   18:					;FOR ALARM
+   19:	  000E	AC 00			MOV R4, 0H ; for minute input for alarm
+   20:	  0010	AD 00			MOV R5, 0H ; for hour input for alarm
+   21:
+   22:					;FOR STOPWATCH suppose a pin calls then it runs the loop like P3.1 gets low for example
+   23:	  0012	AE 00			MOV R6, 0H ; for stopwatch second
+   24:	  0014	AF 00			MOV R7, 0H ; for stopwatch minute
+   25:	  0016	75 68 00		MOV STOPWH, #0H ; for stopwatch hour
+   26:
+   27:	  0019	E4			CLR A; first time clear A
+   28:
+   29:				;----------------------------MANUAL CLOCK-----------------------------;---------------------CLOCK (1
+				ST PART)
+   30:	  001A			START:
+   31:	  001A	75 89 01		MOV TMOD, #00000001 ; Timer 0 as timer
+   32:	  001D	75 88 00		MOV TCON, #00H
+   33:	  0020	08			INC R0 ; increment R0 upto 14 then reset to 0 ... 16bit*14 times= 1 second
+   34:	  0021			ONE_SEC_DIV14:
+   35:	  0021	75 8A 00		MOV TL0, #00H ; 16 bit timer low byte to 0
+   36:	  0024	75 8C 00		MOV TH0, #00H ; 16 bit timer high byte to 0
+   37:	  0027	D2 8C			SETB TR0; Start timer
+   38:	  0029			INTO_14:
+   39:	  0029	30 8D FD		JNB TF0,INTO_14 ; if timer flag 0 go to into_14 again
+   40:	  002C	C2 8D			CLR TF0 ; timer flag clear
+   41:	  002E	C2 8C			CLR TR0 ; timer off
+   42:
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 2
+
+
+
+ Line  I  Addr  Code            Source
+
+   43:	  0030	B8 0E EE		CJNE R0,#0EH, ONE_SEC_DIV14   ;  if 1 second take down
+   44:	  0033	A8 00			MOV R0, 0H ; clear timer
+   45:	  0035	09			INC R1 ; one second increase
+   46:
+   47:					;ALARM CONDITION CHECK;----------------------------------------------------------------ALARM
+   48:	  0036	E5 67			MOV A, ALAR
+   49:	  0038	B5 01 11		CJNE A,01H, HERE ; if alar is 01h then alarm is on
+   50:
+   51:	  003B	EC			MOV A, R4
+   52:	  003C	B5 02 0D		CJNE A, 02H, HERE ;minute matches
+   53:
+   54:	  003F	ED			MOV A, R5
+   55:	  0040	B5 03 09		CJNE A, 03H, HERE ;hour matches
+   56:
+   57:	  0043	D2 B1			SETB P3.1 ; alarm on (connect alarm to P3.1)
+   58:
+   59:					;ALARM TURNING OFF;--------------------------------------------------
+   60:	  0045	E5 67			MOV A, ALAR
+   61:	  0047	B5 00 02		CJNE A,00H , HERE ;
+   62:	  004A	C2 B1			CLR P3.1 ; alarm stopped
+   63:
+   64:	  004C			HERE:
+   65:					;STOPWATCH CONDITION CHECK----------------------------------------------------------STOPWATC
+				H
+   66:	  004C	30 B1 0D		JNB P3.1, ST_ON ; if bit high reset all variables of stopwatch
+   67:					;------------------------store--------------------------------------
+   68:	  004F	8E 69			MOV STOR_S , R6 ; store stopwatch second
+   69:	  0051	8F 6A			MOV STOR_M , R7 ; store stopwatch minute
+   70:	  0053	85 68 6B		MOV STOR_H , STOPWH ; store stopwatch hour
+   71:					;-----------------------clear---------------------------------------
+   72:	  0056	AE 00			MOV R6, 0H ; clear stopwatch second
+   73:	  0058	AF 00			MOV R7, 0H ; clear stopwatch minute
+   74:	  005A	C2 68			CLR STOPWH ; clear stopwatch hour
+   75:
+   76:	  005C	20 B1 08	ST_ON:	JB P3.1 , HERE1 ; if pin gets low stopwatch stars
+   77:					;R6 R7 STOPWH
+   78:	  005F	0E			INC R6 ;one second increase when clock inreases one second ------------ STOPWATCH SECOND COU
+				NT
+   79:
+   80:	  0060	EE			MOV A, R6 ;-----------------STOPWATCH MINUTE CHECK------------------
+   81:	  0061	B4 3C E8		CJNE A,#3CH,HERE ; whether stopwatch reaches 60 seconds
+   82:	  0064	0F			INC R7; increase minute of stopwatch by one-----------------------------STOPWATCH MINUTE COU
+				NT
+   83:	  0065	AE 00			MOV R6, 0H; clear stopwatch second to 0
+   84:
+   85:	  0067	E9		HERE1:	MOV A, R1;-------------------------------------------------------------------------CLOCK (RE
+				ST PART)
+   86:	  0068	B4 3C B6		CJNE A,#3CH, ONE_SEC_DIV14  ; if 60 seconds take down (clock)
+   87:	  006B	A9 00			MOV R1, 0H
+   88:	  006D	0A			INC R2 ; one minute increase
+   89:
+   90:
+   91:	  006E	EF			MOV A , R7;----------------STOPWATCH HOUR CHECK--------------------
+   92:	  006F	B4 3C 04		CJNE A,#3CH,GO ; check stopwatch minute if reaches 60
+   93:	  0072	05 68			INC STOPWH ; incease stopwatch hour by one----------------------------STOPWATCH HOUR COUNT
+   94:	  0074	AF 00			MOV R7, 0H; clear stopwatch minute to 0
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 3
+
+
+
+ Line  I  Addr  Code            Source
+
+   95:
+   96:
+   97:	  0076	EA		GO:	MOV A, R2 ;-------------------------------------------------------
+   98:	  0077	B4 3C A7		CJNE A,#3CH, ONE_SEC_DIV14  ;  if 60 minutes take down (clock)
+   99:
+  100:	  007A	AA 00			MOV R2, 0H
+  101:	  007C	0B			INC R3 ; one hour increases
+  102:
+  103:	  007D	EB			MOV A, R3;-------------------------------------------------------
+  104:	  007E	B4 18 A0		CJNE A, #18H, ONE_SEC_DIV14 ; if 24 hours take down (clock)
+  105:
+  106:	  0081	AB 00			MOV R3, 0H
+  107:	  0083	02 00 21		LJMP ONE_SEC_DIV14
+  108:
+  109:				END
+  110:
+  111:
+  112:
+  113:
+  114:
+  115:
+
+
+
+
+
+                     register banks used:  ---
+
+                     no errors
+
+
+
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 4
+
+
+
+
+
+	       L I S T   O F   S Y M B O L S
+	       =============================
+
+
+SYMBOL				  TYPE     VALUE	LINE
+------------------------------------------------------------
+??ASEM_51			  NUMBER    8051
+??VERSION			  NUMBER    0130
+AC				  BIT	      D6
+ACC				  DATA	      E0
+ALAR				  NUMBER    0067	   6
+B				  DATA	      F0
+CY				  BIT	      D7
+DPH				  DATA	      83
+DPL				  DATA	      82
+EA				  BIT	      AF
+ES				  BIT	      AC
+ET0				  BIT	      A9
+ET1				  BIT	      AB
+EX0				  BIT	      A8
+EX1				  BIT	      AA
+EXTI0				  CODE	    0003
+EXTI1				  CODE	    0013
+F0				  BIT	      D5
+GO				  CODE	    0076	  97
+HERE				  CODE	    004C	  64
+HERE1				  CODE	    0067	  85
+IE				  DATA	      A8
+IE0				  BIT	      89
+IE1				  BIT	      8B
+INT0				  BIT	      B2
+INT1				  BIT	      B3
+INTO_14				  CODE	    0029	  38
+IP				  DATA	      B8
+IT0				  BIT	      88
+IT1				  BIT	      8A
+ONE_SEC_DIV14			  CODE	    0021	  34
+OV				  BIT	      D2
+P				  BIT	      D0
+P0				  DATA	      80
+P1				  DATA	      90
+P2				  DATA	      A0
+P3				  DATA	      B0
+PCON				  DATA	      87
+PS				  BIT	      BC
+PSW				  DATA	      D0
+PT0				  BIT	      B9
+PT1				  BIT	      BB
+PX0				  BIT	      B8
+PX1				  BIT	      BA
+RB8				  BIT	      9A
+RD				  BIT	      B7
+REN				  BIT	      9C
+RESET				  CODE	    0000
+RI				  BIT	      98
+RS0				  BIT	      D3
+
+ASEM-51 V1.3                                         Copyright (c) 2002 by W.W. Heinz                                         PAGE 5
+
+
+
+SYMBOL				  TYPE     VALUE	LINE
+------------------------------------------------------------
+RS1				  BIT	      D4
+RXD				  BIT	      B0
+SBUF				  DATA	      99
+SCON				  DATA	      98
+SINT				  CODE	    0023
+SM0				  BIT	      9F
+SM1				  BIT	      9E
+SM2				  BIT	      9D
+SP				  DATA	      81
+START				  CODE	    001A	  30
+STOPWH				  NUMBER    0068	   7
+STOR_H				  NUMBER    006B	  10
+STOR_M				  NUMBER    006A	   9
+STOR_S				  NUMBER    0069	   8
+ST_ON				  CODE	    005C	  76
+T0				  BIT	      B4
+T1				  BIT	      B5
+TB8				  BIT	      9B
+TCON				  DATA	      88
+TF0				  BIT	      8D
+TF1				  BIT	      8F
+TH0				  DATA	      8C
+TH1				  DATA	      8D
+TI				  BIT	      99
+TIMER0				  CODE	    000B
+TIMER1				  CODE	    001B
+TL0				  DATA	      8A
+TL1				  DATA	      8B
+TMOD				  DATA	      89
+TR0				  BIT	      8C
+TR1				  BIT	      8E
+TXD				  BIT	      B1
+WR				  BIT	      B6
